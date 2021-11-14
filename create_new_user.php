@@ -10,6 +10,8 @@ $username_err = '';
 $password_err = '';
 $password_confirm_err = '';
 
+$method = $_SERVER["REQUEST_METHOD"];
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     printf("Start\n");
@@ -18,7 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $mysql = "SELECT id FROM users WHERE username = ?";
 
     // Prepare and subsequently execute statement
-    if ($statement = mysqli_prepare($link, $mysql)) {
+    if ($statement = $link->prepare($mysql)) {
 
         printf("Statement prepared\n");
 
@@ -71,14 +73,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Prepare and execute INSERT SQL statement to create user.
 
-    $sql = "INSERT INTO users (username, password, is_admin, created) VALUES (?, ?, ?, ?)";
+    $mysql = "INSERT INTO users (username, password, is_admin, created) VALUES (?, ?, ?, ?)";
 
-    if ($statement = mysqli_prepare($link, $sql)) {
+    if ($statement = mysqli_prepare($link, $mysql)) {
         // Prepare parameters, hash password, only admin can create admins.
-        $sql_parameter_username = $username;
-        $sql_parameter_password = password_hash($password, PASSWORD_DEFAULT);
-        $sql_parameter_is_admin = 0;
-        $sql_parameter_created = time();
+        $mysql_parameter_username = $username;
+        $mysql_parameter_password = password_hash($password, PASSWORD_DEFAULT);
+        $mysql_parameter_is_admin = 0;
+        $mysql_parameter_created = time();
         //TODO: Change is_admin to 0 after initial user.
 
         $statement->bind_param(
@@ -92,18 +94,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Attempt to execute prepared statement
         if ($statement->execute()) {
             // Redirect to login page
-            // TODO: Consider having this in Window with JS.
+            // TODO: Consider having user creation in window/modal with JS.
             header('location: login.php');
         } else {
             echo 'Something went wrong. Try again!';
         }
 
+        // Close prepared statement.
         $statement->close();
     }
 
+    // Close database link.
     $link->close();
-
-    printf("Uploaded and link closed.\n");
 }
 ?>
 
