@@ -1,111 +1,68 @@
 <?php
 // Include config file
-require_once 'config.php';
+require __DIR__ . "/inc/bootstrap.php";
 
-$username = '';
-$password = '';
-$password_confirm = '';
-
-$username_err = '';
-$password_err = '';
-$password_confirm_err = '';
+// Nasty, dirty globals, for brevity.
+$username = "";
+$password = "";
+$password_confirm = "";
+$username_err = "";
+$password_err = "";
+$password_confirm_err = "";
 
 $method = $_SERVER["REQUEST_METHOD"];
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($method == "POST") {
+    // Trim the entries in the form so that any leading and tailing spaces are deleted.
+    $new_username = trim($_POST["username"]);
+    $password = trim($_POST["password"]);
+    $password_confirm = trim($_POST["password_confirm"]);
 
-    printf("Start\n");
+	// Define UserModel object for validation comparison.
+	$users = new UserModel();
 
-    // Set up SELECT statement as Prepared Statement to guard against injections.
-    $mysql = "SELECT id FROM users WHERE username = ?";
-
-    // Prepare and subsequently execute statement
-    if ($statement = $link->prepare($mysql)) {
-
-        printf("Statement prepared\n");
-
-        // Retrieve Username from field.
-        $username_sql_parameter = trim($_POST['username']);
-
-        // Bind variable to prepared statement, specify that username is a string
-        $statement->bind_param('s', $username_sql_parameter);
-
-        printf("Parameters bound\n");
-
-        // Execute statements and store results so they can be compared.
-        if ($statement->execute()) {
-            $statement->store_result();
-
-            // Usernames must be unique, no rows must show up in select statement.
-            if ($statement->num_rows() > 0) {
-                //TODO: Add error statement, user already found.
-            } else {
-                $username = trim($_POST['username']);
-
-                printf("Username accepted\n");
-            }
-        } else {
-            echo 'Something went wrong. Try again!';
-        }
-
-        $statement->close();
-    }
-
-    // Minimum length of password, not unique so there's no need to check DB for other instances.
-    // (Nor should we be able to do so).
-    if (strlen($_POST["password"]) < 5) {
-        //TODO: Add error statement, 8 or more characters.
+    // Regex match on the posted username against characters, numbers and underscores.
+	// If it contains any other symbol, we set the global username_error to reflect the error.
+	// Else we call getUserByUsername to see if the posted username exists.
+	// If it does, we set the global username_error to reflect the error, as we require password uniqueness.
+    if (empty($new_username)) {
+        $username_err = "Please enter a username.";
+	} else if(!preg_match("/^[A-Za-z0-9_]{3,20}$/", $new_username)) {
+		$username_err = "Your username must consist of letters, numbers and underscores, and be at least 3, and at most 20 characters.";
+    } else if ($users->getUserByUsername($new_username)->num_rows > 0) {
+		$username_err = "User already exists. Please try another name.";
     } else {
-        $password = trim($_POST['password']);
-
-        printf("Password accepted\n");
+        $username = $new_username;
     }
+
+	// Minimum length of password, not unique so there's no need to check DB for other instances.
+	// (Nor should we be able to do so).
+    if (empty($password)) {
+        $password_err = "Please enter a password.";
+	} else if (strlen($password) < 8) {
+		$password_err = "Password must be longer than 8 characters.";
+	} else {
+		$password = trim($_POST["password"]);
+	}
 
     // Ensure password correctness by making sure both variables match.
-    $password_confirm = trim($_POST['password_confirm']);
-    if ($password != $password_confirm) {
-        //TODO: Add error statement, passwords must match.
-    }
+	if (empty($password_confirm)) {
+        $password_confirm_err = "Please enter your password.";
+    } else if ($password != $password_confirm) {
+		$password_confirm_err = "Password does not match.";
+	}
 
-    printf("Password confirmation accepted\n");
-
-    //TODO: Evaluate correctness of parameters.
-
-    // Prepare and execute INSERT SQL statement to create user.
-
-    $mysql = "INSERT INTO users (username, password, is_admin, created) VALUES (?, ?, ?, ?)";
-
-    if ($statement = mysqli_prepare($link, $mysql)) {
-        // Prepare parameters, hash password, only admin can create admins.
-        $mysql_parameter_username = $username;
-        $mysql_parameter_password = password_hash($password, PASSWORD_DEFAULT);
-        $mysql_parameter_is_admin = 0;
-        $mysql_parameter_created = time();
-        //TODO: Change is_admin to 0 after initial user.
-
-        $statement->bind_param(
-                'ssii',
-                $sql_parameter_username,
-                $sql_parameter_password,
-                $sql_parameter_is_admin,
-                $sql_parameter_created
-        );
-
-        // Attempt to execute prepared statement
-        if ($statement->execute()) {
-            // Redirect to login page
-            // TODO: Consider having user creation in window/modal with JS.
-            header('location: login.php');
+    // Before attempting an INSERT SQL statement, we check if any of the info entered (or not entered) in our form fields is invalid
+    if (empty($username_err) && empty($password_err) && empty($password_confirm_err)) {
+        if ($users->createNewUser($username, password_hash($password, PASSWORD_DEFAULT), 0, time())) {
+			header('location: login.php');
         } else {
-            echo 'Something went wrong. Try again!';
+            echo "Something went wrong. Try again!";
         }
-
-        // Close prepared statement.
-        $statement->close();
     }
 
     // Close database link.
-    $link->close();
+    $users->close();
 }
 ?>
 

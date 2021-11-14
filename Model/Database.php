@@ -22,11 +22,18 @@ class Database {
     // Select query.
     public function select($query = "", $parameters = []) {
         try {
-            $statement = $this->executeStatement($query , $parameters);
-            $result = $statement->get_result()->fetch_all(MYSQLI_ASSOC);
-            $statement->close();
+			// Use prepared statements to avoid SQL injections.
+            $statement = $this->connection->prepare($query);
+            if ($statement === false) {
+                throw New Exception("Unable to do prepared statement: " . $query);
+            }
 
-            return $result;
+			// Properly bind parameters before executing prepared statement.
+            $statement->bind_param($parameters[0], $parameters[1]);
+            $statement->execute();
+            $statement->store_result();
+
+            return $statement;
         } catch(Exception $e) {
             throw New Exception($e->getMessage());
         }
@@ -34,39 +41,29 @@ class Database {
 
     public function post($query = "", $parameters = []) {
         try {
-            $statement = $this->executeStatement($query, $parameters);
-            $statement->close();
+			// Use prepared statements to avoid SQL injections.
+            $statement = $this->connection->prepare($query);
+			if ($statement === false) {
+				throw New Exception("Unable to do prepared statement: " . $query);
+			}
 
+			// Properly bind parameters before executing prepared statement.
+			$statement->bind_param($parameters[0], $parameters[1], $parameters[2], $parameters[3], $parameters[4]);
+			if ($statement->execute()) {
+				$statement->close();
+				return true;
+			}
+
+			return false;
         } catch(Exception $e) {
             throw New Exception ($e->getMessage());
         }
     }
 
-    // Establish and execute prepared statement
-    private function executeStatement($query = "", $parameters = []) {
+    // Closes the Database link.
+    public function close() {
         try {
-            $statement = $this->connection->prepare($query);
-
-            if($statement === false) {
-                throw New Exception("Unable to do prepared statement: " . $query);
-            }
-
-            // Properly bind any parameters to prepared statements.
-            // bind_param potentially takes more variables, but we know we have no more than 4.
-            // Bad, non-scalable solution, but functional for now.
-            // TODO: Generalise, bind parameters properly.
-            // Done to avoid SQL injections.
-            if($parameters) {
-                if ($parameters[2]) {
-                    $statement->bind_param($parameters[0], $parameters[1], $parameters[2], $parameters[3]);
-                } else {
-                    $statement->bind_param($parameters[0], $parameters[1]);
-                }
-            }
-
-            $statement->execute();
-
-            return $statement;
+            $this->connection->close();
         } catch(Exception $e) {
             throw New Exception($e->getMessage());
         }
