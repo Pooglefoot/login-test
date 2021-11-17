@@ -19,7 +19,7 @@ class Database {
         }
     }
 
-    // Select query.
+    // Query for selecting DB entries.
     public function select($query = "", $parameters = []) {
         try {
 			// Use prepared statements to avoid SQL injections.
@@ -39,6 +39,7 @@ class Database {
         }
     }
 
+	// Query for posting DB entries.
     public function post($query = "", $parameters = []) {
         try {
 			// Use prepared statements to avoid SQL injections.
