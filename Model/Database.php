@@ -61,6 +61,27 @@ class Database {
         }
     }
 
+	// Query for updating DB entries.
+	public function update($query = "", $parameters= []) {
+		try {
+			$statement = $this->connection->prepare($query);
+			if ($statement === false) {
+				throw new Exception("Unable to do prepared statement: " . $query);
+			}
+
+			// Properly bind parameters before executing prepared statement.
+			$statement->bind_param($parameters[0], $parameters[1], $parameters[2]);
+			if ($statement->execute()) {
+				$statement->close();
+				return true;
+			}
+
+			return false;
+		} catch (Exception $e) {
+			throw New Exception ($e->getMessage());
+		}
+	}
+
     // Closes the Database link.
     public function close() {
         try {
