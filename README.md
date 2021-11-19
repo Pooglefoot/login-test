@@ -1,5 +1,7 @@
 # login-test
 
+Continually under development...
+
 Test database created and administered with xampp and PhpMyAdmin respectively, and is included in "database/km_site.sql"
 
 To login as administrator (no functional difference from regular users, apart from a shorter password) use username "admin", password "admin"
