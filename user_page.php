@@ -29,9 +29,6 @@ if(!isset($_SESSION["logged_in"]) || $_SESSION["logged_in"] !== true){
     </head>
     <body>
         <div class="topBar">
-            <?php if ($_SESSION["is_admin"]) { ?>
-                <a href="reset_password.php" class="btn btn-success">See list of users</a>
-            <?php } ?>
             <a href="reset_password.php" class="btn btn-warning">Reset Password</a>
             <a href="logout.php" class="btn btn-danger">Logout</a>
         </div>
